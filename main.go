@@ -1,32 +1,31 @@
 package main
 
 import (
-	"net/http"
+	book "dummyAPI/model"
 
-	"dummyAPI/connection"
-
+	"github.com/kamva/mgm/v3"
+	"github.com/labstack/echo/middleware"
 	"github.com/labstack/echo/v4"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-func Hellocontroller(c echo.Context) error {
-	return c.String(http.StatusOK, "hello world!")
+func init() {
+	_ = mgm.SetDefaultConfig(nil, "check_echo", options.Client().ApplyURI("mongodb://root:12345@localhost:27017"))
 }
 
 func main() {
+	e := echo.New()
+	e.Debug = true
 
-	urldb := "mongodb://localhost:27017"
+	e.Use(middleware.Logger())
+	e.Use(middleware.Recover())
 
-	client, ctx, cancel, err := connection.Connect(urldb)
-	if err != nil {
-		panic(err)
+	bookGroup := e.Group("/book")
+	{
+		bookGroup.POST("", book.Create)
+		bookGroup.PUT("/:id", book.Update)
+		bookGroup.DELETE("/:id", book.Delete)
 	}
 
-	connection.Ping(client, ctx)
-
-	e := echo.New()
-
-	e.GET("/", Hellocontroller)
-
-	e.Start(":4000")
-	defer connection.Close(client, ctx, cancel)
+	e.Logger.Fatal(e.Start(":1323"))
 }
